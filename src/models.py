@@ -10,8 +10,14 @@ class Player:
     ip: str
     nickname: str
     age: int
-    role: str
+    role: PlayerRole
     location: str
+
+class PlayerRole(enum.StrEnum):
+    DEFAULT = "default"
+    VIP = "vip"
+    MODERATOR = "moderator"
+    ADMIN = "admin"
 
 @dataclass(frozen=True, slots=True)
 class Server:
