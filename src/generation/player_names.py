@@ -1,5 +1,5 @@
 # name_generator.py
-
+from __future__ import annotations
 import random
 
 PREFIXES = [
@@ -46,10 +46,8 @@ WORDS = [
     "Creeper",
 ]
 
-
-def generate_nickname() -> str:
-    prefix = random.choice(PREFIXES)
-    word = random.choice(WORDS)
-    number = random.randint(1, 9999)
-
+def generate_nickname(rng: random.Random) -> str:
+    prefix = rng.choice(PREFIXES)
+    word = rng.choice(WORDS)
+    number = rng.randint(1, 9999)
     return f"{prefix}_{word}{number}"
