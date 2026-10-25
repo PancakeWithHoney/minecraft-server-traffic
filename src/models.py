@@ -36,9 +36,6 @@ class GameModeType(enum.StrEnum):
     HUNGER_GAMES = 'hungergames'
     TNT_RUN = 'tntrun'
 
-class ActionType(enum.StrEnum):
-    JOIN = "join"
-    LEAVE = "leave"
 
 class ExitReason(enum.StrEnum):
     DEFAULT = "default"
@@ -46,14 +43,15 @@ class ExitReason(enum.StrEnum):
     SERVER_NOT_RESPONDING = "server_not_responding"
     KICK = "kick"
     BAN = "ban"
-    UNKNOWN = "unknown"
 
 @dataclass(frozen=True, slots=True)
-class PlayerReading:
-    id: int
-    timestamp: datetime
+class SessionReading:
+    session_id: int
+    started_at: datetime
     player_id: int
     server_id: int
-    action_type: ActionType
-    exit_reason: ExitReason | None
+    exit_reason: ExitReason
+    chat_messages_cnt: int
+    activity_coefficient: float
+    duration_sec: int
     is_anomaly: bool
