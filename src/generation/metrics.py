@@ -22,16 +22,16 @@ class ServerProfile:
 """Характеристики игрового режима"""
 @dataclass(frozen=True, slots=True)
 class GamemodeProfile:
-    base_sessions_per_hour: float
+    base_session_duration: float
     base_activity_coefficient: float
     base_messages_per_minute: float
+    is_fixed_duration: bool = False
 
-'''Настройки сессий'''
+'''Общие настройки сессий (ограничения)'''
 @dataclass(frozen=True, slots=True)
 class SessionProfile:
     min_duration_seconds: int = 60
     max_duration_seconds: int = 3600 * 5
-    typical_duration_seconds: int = 20 * 60
 
     min_activity: float = 0.0
     max_activity: float = 1.0

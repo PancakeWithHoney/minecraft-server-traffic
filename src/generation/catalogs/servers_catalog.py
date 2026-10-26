@@ -21,13 +21,13 @@ _GENERIC = GamemodeProfile(
 @dataclass(frozen=True, slots=True)
 class _Template:
     server_name: str
-    gamemode: GamemodeProfile
+    gamemode: str
 
 _TEMPLATES: dict[str, _Template] = {
     "surv_1": _Template(
         "EPIC_SURVIVAL_1000LVL",
         GamemodeProfile(
-            
+
         )
     ),
     "Moscow": _Template(
