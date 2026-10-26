@@ -35,6 +35,7 @@ class GameModeType(enum.StrEnum):
     MURDER_MYSTERY = 'murdermystery'
     HUNGER_GAMES = 'hungergames'
     TNT_RUN = 'tntrun'
+    LOBBY = 'lobby'
 
 
 class ExitReason(enum.StrEnum):
@@ -48,6 +49,7 @@ class ExitReason(enum.StrEnum):
 class SessionReading:
     session_id: int
     started_at: datetime
+    ended_at: datetime
     player_id: int
     server_id: int
     exit_reason: ExitReason

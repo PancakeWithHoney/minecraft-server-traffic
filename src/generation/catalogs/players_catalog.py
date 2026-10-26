@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import random
 
-from generator.models import Player, PlayerRole
-from generator.player_names import generate_nickname
+from src.models import Player, PlayerRole
+from src.generation.player_names import generate_nickname
 
 
 class PlayerCatalog:

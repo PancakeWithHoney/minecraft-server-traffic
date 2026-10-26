@@ -7,7 +7,6 @@ import random
 class AnomalyKind(enum.StrEnum):
     MASS_JOIN = "mass_join"
     MASS_LEAVE = "mass_leave"
-    RAPID_RECONNECT = "rapid_reconnect"
     SHORT_SESSIONS = "short_sessions"
     LONG_SESSIONS = "long_sessions"
 
