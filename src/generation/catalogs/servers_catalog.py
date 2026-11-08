@@ -1,85 +1,129 @@
-"""Справочник серверов и их профилей активности
+"""Справочник серверов и их профилей.
+
+- servers() — фабрика Server (count штук, детерминированно по rng).
+- profile_for(server) — GamemodeProfile по server.game_mode.
+- server_profile() — общий ServerProfile (base_sessions_per_hour, max_players).
 """
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
 
 from src.models import Server, GameModeType
-
-from ..metrics import GamemodeProfile
-
-_GENERIC = GamemodeProfile(
-    gamemode=GameModeType.SURVIVAL,
-    max_players=1000,
-    base_sessions_per_hour=100,
-    base_activity_coefficient=1.0,
-    base_messages_per_minute=10
-)
+from src.metrics import GamemodeProfile, ServerProfile
 
 
-@dataclass(frozen=True, slots=True)
-class _Template:
-    server_name: str
-    gamemode: str
-
-_TEMPLATES: dict[str, _Template] = {
-    "surv_1": _Template(
-        "EPIC_SURVIVAL_1000LVL",
-        GamemodeProfile(
-
-        )
+# ─────────────────────────────────────────────────────────────
+# Шаблоны профилей режимов (аналог _TEMPLATES в weather, но
+# это не сущности, а параметры — поэтому отдельно от _build)
+# ─────────────────────────────────────────────────────────────
+_GAMEMODE_PROFILES: dict[GameModeType, GamemodeProfile] = {
+    GameModeType.SURVIVAL: GamemodeProfile(
+        base_session_duration=1800.0,        # 30 мин
+        base_activity_coefficient=0.7,
+        base_messages_per_minute=2.0,
+        is_fixed_duration=False,
     ),
-    "Moscow": _Template(
-        "Moscow", 55.76, 37.62, 156,
-        ClimateProfile(mean_annual_temp_c=6.0, annual_temp_amplitude_c=25.0,
-                       daily_temp_amplitude_c=7.0, humidity_base_pct=72.0,
-                       pressure_base_hpa=1013.0, wind_base_ms=5.0),
+    GameModeType.BEDWARS: GamemodeProfile(
+        base_session_duration=900.0,         # 15 мин
+        base_activity_coefficient=0.9,
+        base_messages_per_minute=3.0,
+        is_fixed_duration=False,
     ),
-    "Kazan": _Template(
-        "Kazan", 55.79, 49.12, 64,
-        ClimateProfile(mean_annual_temp_c=4.5, annual_temp_amplitude_c=27.0,
-                       daily_temp_amplitude_c=7.0, humidity_base_pct=73.0,
-                       pressure_base_hpa=1013.0, wind_base_ms=4.5),
+    GameModeType.SKYWARS: GamemodeProfile(
+        base_session_duration=720.0,         # 12 мин
+        base_activity_coefficient=0.85,
+        base_messages_per_minute=3.0,
+        is_fixed_duration=False,
     ),
-    "Sochi": _Template(
-        "Sochi", 43.60, 39.73, 30,
-        ClimateProfile(mean_annual_temp_c=14.0, annual_temp_amplitude_c=14.0,
-                       daily_temp_amplitude_c=6.0, humidity_base_pct=75.0,
-                       pressure_base_hpa=1012.0, wind_base_ms=3.0),
+    GameModeType.BUILD_BATTLE: GamemodeProfile(
+        base_session_duration=600.0,         # 10 мин — фикс
+        base_activity_coefficient=0.6,
+        base_messages_per_minute=5.0,
+        is_fixed_duration=True,
     ),
-    "Irkutsk": _Template(
-        "Irkutsk", 52.29, 104.28, 444,
-        ClimateProfile(mean_annual_temp_c=1.0, annual_temp_amplitude_c=33.0,
-                       daily_temp_amplitude_c=9.0, humidity_base_pct=68.0,
-                       pressure_base_hpa=1005.0, wind_base_ms=4.0),
+    GameModeType.MURDER_MYSTERY: GamemodeProfile(
+        base_session_duration=540.0,         # 9 мин — фикс
+        base_activity_coefficient=0.7,
+        base_messages_per_minute=4.0,
+        is_fixed_duration=True,
+    ),
+    GameModeType.HUNGER_GAMES: GamemodeProfile(
+        base_session_duration=1500.0,        # 25 мин
+        base_activity_coefficient=0.8,
+        base_messages_per_minute=2.5,
+        is_fixed_duration=False,
+    ),
+    GameModeType.TNT_RUN: GamemodeProfile(
+        base_session_duration=300.0,         # 5 мин — фикс
+        base_activity_coefficient=0.95,
+        base_messages_per_minute=2.0,
+        is_fixed_duration=True,
     ),
 }
 
+# Веса популярности режимов — для rng.choices
+_GAMEMODE_WEIGHTS: dict[GameModeType, int] = {
+    GameModeType.SURVIVAL: 30,
+    GameModeType.BEDWARS: 25,
+    GameModeType.SKYWARS: 15,
+    GameModeType.BUILD_BATTLE: 10,
+    GameModeType.MURDER_MYSTERY: 8,
+    GameModeType.HUNGER_GAMES: 7,
+    GameModeType.TNT_RUN: 5,
+}
 
-class StationCatalog:
-    """Фабрика станций по списку городов из конфигурации."""
 
-    def __init__(self, cities: list[str]) -> None:
-        self._templates = [self._resolve(city) for city in cities]
+class ServerCatalog:
+    """Фабрика серверов: count штук, детерминированно по rng."""
+
+    def __init__(
+        self,
+        count: int,
+        rng: random.Random,
+        server_profile: ServerProfile,
+    ) -> None:
+        if count <= 0:
+            raise ValueError(f"count must be > 0, got {count}")
+        self._server_profile = server_profile
+        self._servers = self._build(count, rng)
+        self._by_id = {s.id: s for s in self._servers}
+
+    # ---------- ФАБРИКА ----------
+    def _build(self, count: int, rng: random.Random) -> list[Server]:
+        modes = list(_GAMEMODE_PROFILES.keys())
+        weights = [_GAMEMODE_WEIGHTS[m] for m in modes]
+        servers: list[Server] = []
+        for i in range(count):
+            mode = rng.choices(modes, weights=weights, k=1)[0]
+            servers.append(Server(
+                id=i,
+                name=f"server_{i}_{mode.value}",
+                ip=self._random_ip(rng),
+                game_mode=mode,
+            ))
+        return servers
 
     @staticmethod
-    def _resolve(city: str) -> _Template:
-        # Неизвестный город получает обобщённый профиль, чтобы система не падала.
-        return _TEMPLATES.get(city, _Template(city, 0.0, 0.0, 100.0, _GENERIC))
+    def _random_ip(rng: random.Random) -> str:
+        return (
+            f"10.{rng.randint(0, 255)}."
+            f"{rng.randint(0, 255)}.{rng.randint(1, 254)}"
+        )
 
-    def stations(self) -> list[Station]:
-        return [
-            Station(
-                station_id=index,
-                name=f"{t.city} Station",
-                city=t.city,
-                latitude=t.latitude,
-                longitude=t.longitude,
-                altitude=t.altitude,
-            )
-            for index, t in enumerate(self._templates)
-        ]
+    # ---------- ПУБЛИЧНЫЙ API ----------
+    def servers(self) -> list[Server]:
+        return list(self._servers)
 
-    def climate_for(self, station: Station) -> ClimateProfile:
-        return next(t.climate for t in self._templates if t.city == station.city)
+    def by_id(self, server_id: int) -> Server | None:
+        return self._by_id.get(server_id)
+
+    # ---------- МОСТ К СЭМПЛЕРАМ ----------
+    def profile_for(self, server: Server) -> GamemodeProfile:
+        """GamemodeProfile по режиму сервера — аналог climate_for(station)."""
+        return _GAMEMODE_PROFILES[server.game_mode]
+
+    def server_profile(self) -> ServerProfile:
+        """Общий ServerProfile (base_sessions_per_hour, max_players)."""
+        return self._server_profile
