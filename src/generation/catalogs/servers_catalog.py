@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from src.models import Server, GameModeType
 
 from ..metrics import ServerProfile, GamemodeProfile
+from ..profiles.gamemode_profiles import GAMEMODE_PROFILES
 
 """Справочник серверов и их профилей активности
 """
@@ -76,15 +77,28 @@ _TEMPLATES: dict[str, _Template] = {
     ),
     "skywars": _Template(
         "EPIC SKYWARS",
-        GameModeType.S,
+        GameModeType.SKYWARS,
         ServerProfile(
             base_sessions_per_hour=120,
             max_players=30,
         )
     ),
-
-
-
+    "lobby": _Template(
+        "WONDERFUL LOBBY",
+        GameModeType.LOBBY,
+        ServerProfile(
+            base_sessions_per_hour=1000,
+            max_players=2000,
+        )
+    ),
+    "hunger": _Template(
+        "HUNGER GAMES ",
+        GameModeType.LOBBY,
+        ServerProfile(
+            base_sessions_per_hour=70,
+            max_players=30,
+        )
+    ),
 }
 
 
@@ -105,7 +119,7 @@ class ServerCatalog:
 
     # ---------- ФАБРИКА ----------
     def _build(self, count: int, rng: random.Random) -> list[Server]:
-        modes = list(_GAMEMODE_PROFILES.keys())
+        modes = list(GAMEMODE_PROFILES.keys())
         weights = [_GAMEMODE_WEIGHTS[m] for m in modes]
         servers: list[Server] = []
         for i in range(count):
