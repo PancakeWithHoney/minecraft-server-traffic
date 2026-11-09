@@ -5,73 +5,86 @@
 - server_profile() — общий ServerProfile (base_sessions_per_hour, max_players).
 """
 
+import random
+
 from __future__ import annotations
 
-import random
 from dataclasses import dataclass
 
 from src.models import Server, GameModeType
-from src.metrics import GamemodeProfile, ServerProfile
+
+from ..metrics import ServerProfile, GamemodeProfile
+
+"""Справочник серверов и их профилей активности
+"""
+
+_GENERIC = GamemodeProfile(
+    gamemode=GameModeType.SURVIVAL,
+    max_players=1000,
+    base_sessions_per_hour=100,
+    base_activity_coefficient=1.0,
+    base_messages_per_minute=10
+)
 
 
-# ─────────────────────────────────────────────────────────────
-# Шаблоны профилей режимов (аналог _TEMPLATES в weather, но
-# это не сущности, а параметры — поэтому отдельно от _build)
-# ─────────────────────────────────────────────────────────────
-_GAMEMODE_PROFILES: dict[GameModeType, GamemodeProfile] = {
-    GameModeType.SURVIVAL: GamemodeProfile(
-        base_session_duration=1800.0,        # 30 мин
-        base_activity_coefficient=0.7,
-        base_messages_per_minute=2.0,
-        is_fixed_duration=False,
-    ),
-    GameModeType.BEDWARS: GamemodeProfile(
-        base_session_duration=900.0,         # 15 мин
-        base_activity_coefficient=0.9,
-        base_messages_per_minute=3.0,
-        is_fixed_duration=False,
-    ),
-    GameModeType.SKYWARS: GamemodeProfile(
-        base_session_duration=720.0,         # 12 мин
-        base_activity_coefficient=0.85,
-        base_messages_per_minute=3.0,
-        is_fixed_duration=False,
-    ),
-    GameModeType.BUILD_BATTLE: GamemodeProfile(
-        base_session_duration=600.0,         # 10 мин — фикс
-        base_activity_coefficient=0.6,
-        base_messages_per_minute=5.0,
-        is_fixed_duration=True,
-    ),
-    GameModeType.MURDER_MYSTERY: GamemodeProfile(
-        base_session_duration=540.0,         # 9 мин — фикс
-        base_activity_coefficient=0.7,
-        base_messages_per_minute=4.0,
-        is_fixed_duration=True,
-    ),
-    GameModeType.HUNGER_GAMES: GamemodeProfile(
-        base_session_duration=1500.0,        # 25 мин
-        base_activity_coefficient=0.8,
-        base_messages_per_minute=2.5,
-        is_fixed_duration=False,
-    ),
-    GameModeType.TNT_RUN: GamemodeProfile(
-        base_session_duration=300.0,         # 5 мин — фикс
-        base_activity_coefficient=0.95,
-        base_messages_per_minute=2.0,
-        is_fixed_duration=True,
-    ),
-}
+@dataclass(frozen=True, slots=True)
+class _Template:
+    server_name: str
+    gamemode: str
+    server_profile: ServerProfile
 
-# Веса популярности режимов — для rng.choices
-_GAMEMODE_WEIGHTS: dict[GameModeType, int] = {
-    GameModeType.SURVIVAL: 30,
-    GameModeType.BEDWARS: 25,
-    GameModeType.SKYWARS: 15,
-    GameModeType.BUILD_BATTLE: 10,
-    GameModeType.MURDER_MYSTERY: 8,
-    GameModeType.HUNGER_GAMES: 7,
-    GameModeType.TNT_RUN: 5,
+_TEMPLATES: dict[str, _Template] = {
+    "surv_1": _Template(
+        "EPIC SURVIVAL 1000LVL",
+        GameModeType.SURVIVAL,
+        ServerProfile(
+            base_sessions_per_hour=100,
+            max_players=1000,
+        )
+    ),
+    "surv_2": _Template(
+        "HARDCORE SURVIVAL",
+        GameModeType.SURVIVAL,
+        ServerProfile(
+            base_sessions_per_hour=20,
+            max_players=1000,
+        )
+    ),
+    "bedwars_1": _Template(
+        "BEDWARS",
+        GameModeType.BEDWARS,
+        ServerProfile(
+            base_sessions_per_hour=100,
+            max_players=30,
+        )
+    ),
+    "buildbattle": _Template(
+        "LEGENDARY BUILD BATTLE",
+        GameModeType.BUILD_BATTLE,
+        ServerProfile(
+            base_sessions_per_hour=50,
+            max_players=10,
+        )
+    ),
+    "murdermystery": _Template(
+        "MYRDER MYSTERY",
+        GameModeType.MURDER_MYSTERY,
+        ServerProfile(
+            base_sessions_per_hour=100,
+            max_players=30,
+        )
+    ),
+    "skywars": _Template(
+        "EPIC SKYWARS",
+        GameModeType.S,
+        ServerProfile(
+            base_sessions_per_hour=120,
+            max_players=30,
+        )
+    ),
+
+
+
 }
 
 
