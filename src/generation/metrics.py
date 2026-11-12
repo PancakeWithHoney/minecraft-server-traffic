@@ -6,13 +6,15 @@ from dataclasses import dataclass
 from datetime import datetime
 import math
 
-from src.models import GameModeType
+from src.generation.distributions import poisson
 from seasonality import diurnal_factor, annual_factor
 
 @dataclass(frozen=True)
 class ReadingContext:
     at: datetime
     gamemode: GamemodeProfile
+    server: ServerProfile
+    duration_seconds: float # длительность одной сессии, необходима для генерации кол-ва сообщений
 
 """Настройки сервера"""
 @dataclass(frozen=True, slots=True)
@@ -38,7 +40,6 @@ class SessionProfile:
     max_activity: float = 1.0
 
 def _clamp(v: float, lo: float, hi: float) -> float:
-    """Зажать в [lo, hi] — как в PDF."""
     return max(lo, min(hi, v))
 
 class MetricSampler(ABC):
@@ -47,7 +48,30 @@ class MetricSampler(ABC):
 
 class JoinTimeSampler(MetricSampler):
     def sample(self, ctx: ReadingContext, rng: random.Random) -> float:
-        pass
+        """Генерирует количество секунд до следующего входа"""
+        sessions_per_hour = ctx.server.base_sessions_per_hour
+
+        if sessions_per_hour <= 0:
+            raise ValueError("base_sessions_per_hour должен быть больше 0")
+
+        # Суточная сезонность
+        daily = (diurnal_factor(ctx.at) + 1.0) / 2.0
+        daily_mult = 1.0 + 0.5 * daily
+
+        # Годовая сезонность
+        yearly = (annual_factor(ctx.at) + 1.0) / 2.0
+        yearly_mult = 1.0 + 0.3 * yearly
+
+        # Интенсивность входов с учётом сезонности
+        rate_per_hour = (
+            sessions_per_hour * daily_mult * yearly_mult
+        )
+
+        # Переводим интенсивность в секунды
+        rate_per_second = rate_per_hour / 3600
+
+        # Случайный интервал до следующего входа
+        return rng.expovariate(rate_per_second)
 
 class SessionDurationSampler(MetricSampler):
     def __init__(self, profile: SessionProfile) -> None:
@@ -64,14 +88,14 @@ class SessionDurationSampler(MetricSampler):
                 self._profile.max_duration_seconds,
             )
 
-        # ── 2. Переменная длительность (Survival, Bedwars) ──
-        # 2.1. суточная сезонность: вечером дольше
-        daily = (diurnal_factor(ctx.at) + 1.0) / 2.0    # 0..1
-        daily_mult = 1.0 + 0.5 * daily                   # 1.0..1.5
+        # ── 2. Переменная длительность ──
+        # 2.1. суточная сезонность
+        daily = (diurnal_factor(ctx.at) + 1.0) / 2.0
+        daily_mult = 1.0 + 0.5 * daily
 
-        # 2.2. годовая сезонность: летом дольше
-        yearly = (annual_factor(ctx.at) + 1.0) / 2.0    # 0..1
-        yearly_mult = 1.0 + 0.3 * yearly                 # 1.0..1.3
+        # 2.2. годовая сезонность
+        yearly = (annual_factor(ctx.at) + 1.0) / 2.0
+        yearly_mult = 1.0 + 0.3 * yearly
 
         # 2.3. ожидаемая длительность
         expected = mode.base_session_duration * daily_mult * yearly_mult
@@ -92,11 +116,38 @@ class ActivityCoefficientSampler(MetricSampler):
         self._profile = profile
 
     def sample(self, ctx: ReadingContext, rng: random.Random) -> float:
-        pass
+        mean = ctx.gamemode.base_activity_coefficient
+
+        mean = _clamp(
+            mean,
+            self._profile.min_activity,
+            self._profile.max_activity,
+        )
+
+        if mean <= 0.0 or mean >= 1.0:
+            return mean
+
+        # Чем больше concentration, тем меньше разброс
+        concentration = 12.0
+
+        alpha = mean * concentration
+        beta = (1.0 - mean) * concentration
+
+        value = rng.betavariate(alpha, beta)
+
+        return _clamp(
+            value,
+            self._profile.min_activity,
+            self._profile.max_activity,
+        )
 
 class MessagesCountSampler(MetricSampler):
-    def __init__(self, profile: SessionProfile) -> None:
-        self._profile = profile
+    def sample(self, ctx: ReadingContext, rng: random.Random) -> int:
+        duration_minutes = ctx.duration_seconds / 60
 
-    def sample(self, ctx: ReadingContext, rng: random.Random) -> float:
-        pass
+        lam = (
+            ctx.gamemode.base_messages_per_minute
+            * duration_minutes
+        )
+
+        return poisson(lam, rng)
