@@ -68,7 +68,7 @@ _TEMPLATES: dict[str, _Template] = {
         )
     ),
     "murdermystery": _Template(
-        "MYRDER MYSTERY",
+        "MYSTIC MURDER MYSTERY",
         GameModeType.MURDER_MYSTERY,
         ServerProfile(
             base_sessions_per_hour=100,
@@ -92,7 +92,7 @@ _TEMPLATES: dict[str, _Template] = {
         )
     ),
     "hunger": _Template(
-        "HUNGER GAMES ",
+        "HUNGER GAMES",
         GameModeType.LOBBY,
         ServerProfile(
             base_sessions_per_hour=70,
