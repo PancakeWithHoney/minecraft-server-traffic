@@ -5,100 +5,25 @@
 - server_profile() — общий ServerProfile (base_sessions_per_hour, max_players).
 """
 
-import random
-
 from __future__ import annotations
 
-from dataclasses import dataclass
+import random
 
 from src.models import Server, GameModeType
-
-from ..metrics import ServerProfile, GamemodeProfile
-from ..profiles.gamemode_profiles import GAMEMODE_PROFILES
-
-"""Справочник серверов и их профилей активности
-"""
-
-_GENERIC = GamemodeProfile(
-    gamemode=GameModeType.SURVIVAL,
-    max_players=1000,
-    base_sessions_per_hour=100,
-    base_activity_coefficient=1.0,
-    base_messages_per_minute=10
-)
+from src.generation.metrics import ServerProfile, GamemodeProfile
+from src.generation.profiles.gamemode_profiles import GAMEMODE_PROFILES
 
 
-@dataclass(frozen=True, slots=True)
-class _Template:
-    server_name: str
-    gamemode: str
-    server_profile: ServerProfile
-
-_TEMPLATES: dict[str, _Template] = {
-    "surv_1": _Template(
-        "EPIC SURVIVAL 1000LVL",
-        GameModeType.SURVIVAL,
-        ServerProfile(
-            base_sessions_per_hour=100,
-            max_players=1000,
-        )
-    ),
-    "surv_2": _Template(
-        "HARDCORE SURVIVAL",
-        GameModeType.SURVIVAL,
-        ServerProfile(
-            base_sessions_per_hour=20,
-            max_players=1000,
-        )
-    ),
-    "bedwars_1": _Template(
-        "BEDWARS",
-        GameModeType.BEDWARS,
-        ServerProfile(
-            base_sessions_per_hour=100,
-            max_players=30,
-        )
-    ),
-    "buildbattle": _Template(
-        "LEGENDARY BUILD BATTLE",
-        GameModeType.BUILD_BATTLE,
-        ServerProfile(
-            base_sessions_per_hour=50,
-            max_players=10,
-        )
-    ),
-    "murdermystery": _Template(
-        "MYSTIC MURDER MYSTERY",
-        GameModeType.MURDER_MYSTERY,
-        ServerProfile(
-            base_sessions_per_hour=100,
-            max_players=30,
-        )
-    ),
-    "skywars": _Template(
-        "EPIC SKYWARS",
-        GameModeType.SKYWARS,
-        ServerProfile(
-            base_sessions_per_hour=120,
-            max_players=30,
-        )
-    ),
-    "lobby": _Template(
-        "WONDERFUL LOBBY",
-        GameModeType.LOBBY,
-        ServerProfile(
-            base_sessions_per_hour=1000,
-            max_players=2000,
-        )
-    ),
-    "hunger": _Template(
-        "HUNGER GAMES",
-        GameModeType.LOBBY,
-        ServerProfile(
-            base_sessions_per_hour=70,
-            max_players=30,
-        )
-    ),
+# Веса популярности режимов — для rng.choices (реалистичное распределение серверов)
+_GAMEMODE_WEIGHTS: dict[GameModeType, int] = {
+    GameModeType.SURVIVAL: 30,
+    GameModeType.BEDWARS: 25,
+    GameModeType.SKYWARS: 15,
+    GameModeType.BUILD_BATTLE: 10,
+    GameModeType.MURDER_MYSTERY: 8,
+    GameModeType.HUNGER_GAMES: 7,
+    GameModeType.TNT_RUN: 5,
+    GameModeType.LOBBY: 20,
 }
 
 
@@ -120,7 +45,7 @@ class ServerCatalog:
     # ---------- ФАБРИКА ----------
     def _build(self, count: int, rng: random.Random) -> list[Server]:
         modes = list(GAMEMODE_PROFILES.keys())
-        weights = [_GAMEMODE_WEIGHTS[m] for m in modes]
+        weights = [_GAMEMODE_WEIGHTS.get(m, 1) for m in modes]
         servers: list[Server] = []
         for i in range(count):
             mode = rng.choices(modes, weights=weights, k=1)[0]
@@ -148,9 +73,7 @@ class ServerCatalog:
 
     # ---------- МОСТ К СЭМПЛЕРАМ ----------
     def profile_for(self, server: Server) -> GamemodeProfile:
-        """GamemodeProfile по режиму сервера — аналог climate_for(station)."""
-        return _GAMEMODE_PROFILES[server.game_mode]
+        return GAMEMODE_PROFILES[server.game_mode]
 
     def server_profile(self) -> ServerProfile:
-        """Общий ServerProfile (base_sessions_per_hour, max_players)."""
         return self._server_profile

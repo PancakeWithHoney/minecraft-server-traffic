@@ -37,6 +37,7 @@ GAMEMODE_PROFILES = {
         base_session_duration=60 * 12,
         base_activity_coefficient=0.5,
         base_messages_per_minute=0.08,
+        is_fixed_duration=True
     ),
     GameModeType.SKYWARS: GamemodeProfile(
         base_session_duration=60 * 12,

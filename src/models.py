@@ -1,8 +1,9 @@
-
 from __future__ import annotations
+
 import enum
 from dataclasses import dataclass
 from datetime import datetime
+
 
 @dataclass(frozen=True, slots=True)
 class Player:
@@ -13,11 +14,13 @@ class Player:
     role: PlayerRole
     location: str
 
+
 class PlayerRole(enum.StrEnum):
     DEFAULT = "default"
     VIP = "vip"
     MODERATOR = "moderator"
     ADMIN = "admin"
+
 
 @dataclass(frozen=True, slots=True)
 class Server:
@@ -30,12 +33,12 @@ class Server:
 class GameModeType(enum.StrEnum):
     SURVIVAL = "survival"
     BEDWARS = "creative"
-    SKYWARS = 'skywars'
-    BUILD_BATTLE = 'buildbattle'
-    MURDER_MYSTERY = 'murdermystery'
-    HUNGER_GAMES = 'hungergames'
-    TNT_RUN = 'tntrun'
-    LOBBY = 'lobby'
+    SKYWARS = "skywars"
+    BUILD_BATTLE = "buildbattle"
+    MURDER_MYSTERY = "murdermystery"
+    HUNGER_GAMES = "hungergames"
+    TNT_RUN = "tntrun"
+    LOBBY = "lobby"
 
 
 class ExitReason(enum.StrEnum):
@@ -44,6 +47,7 @@ class ExitReason(enum.StrEnum):
     SERVER_NOT_RESPONDING = "server_not_responding"
     KICK = "kick"
     BAN = "ban"
+
 
 @dataclass(frozen=True, slots=True)
 class SessionReading:
@@ -55,5 +59,5 @@ class SessionReading:
     exit_reason: ExitReason
     chat_messages_cnt: int
     activity_coefficient: float
-    duration_sec: int
+    duration_sec: float
     is_anomaly: bool

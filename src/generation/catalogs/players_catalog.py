@@ -71,3 +71,6 @@ class PlayerCatalog:
 
     def by_id(self, player_id: int) -> Player | None:
         return self._by_id.get(player_id)
+    def random_player(self, rng: random.Random) -> Player:
+        """Случайный игрок (не None) — для выбора в SessionReadingGenerator."""
+        return self._players[rng.randrange(len(self._players))]

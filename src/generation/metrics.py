@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+import math
 import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-import math
 
 from src.generation.distributions import poisson
-from seasonality import diurnal_factor, annual_factor
+from src.generation.seasonality import diurnal_factor, annual_factor
 
 @dataclass(frozen=True)
 class ReadingContext:

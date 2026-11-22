@@ -29,7 +29,7 @@ class ClickHouseSettings(BaseSettings):
 
     host: str = Field(default="localhost")
     port: int = Field(default=8123, ge=1, le=65535)
-    database: str = Field(default="weather")
+    database: str = Field(default="gaming")
     user: str = Field(default="default")
     password: str = Field(default="")
 
