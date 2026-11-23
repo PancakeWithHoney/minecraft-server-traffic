@@ -27,7 +27,7 @@ class ClickHouseSettings(BaseSettings):
         case_sensitive=False,
     )
 
-    host: str = Field(default="localhost")
+    host: str = Field(default="127.0.0.1")
     port: int = Field(default=8123, ge=1, le=65535)
     database: str = Field(default="gaming")
     user: str = Field(default="default")
@@ -61,6 +61,8 @@ class GeneratorSettings(BaseSettings):
     # --- Игроки и сервера -------------------------------------------------
     player_count: int = 1000
     server_count: int = 10
+
+    cities: str = Field(default="Moscow,Vladivostok,Kazan,Sochi,Irkutsk", description="Города через запятую")
 
     # --- Логирование ---------------------------------------------------------
     log_level: str = Field(default="INFO", description="Уровень логирования")
